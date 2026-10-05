@@ -1,7 +1,7 @@
 # Reflection — Lab 19
 
-**Tên:** _<Họ Tên>_
-**Cohort:** _<A20-K4>_
+**Tên:** Đặng Thế Vinh
+**Cohort:** A20-K4
 **Path đã chạy:** lite
 
 ---
