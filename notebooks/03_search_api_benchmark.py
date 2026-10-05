@@ -88,12 +88,24 @@ def percentile(values: list[float], p: float) -> float:
 def benchmark_mode(mode: str, reps: int = 2) -> dict[str, float]:
     server_latencies: list[float] = []
     wall_latencies: list[float] = []
-    for _ in range(reps):
-        for q in golden:
-            t0 = time.perf_counter()
-            r = httpx.get(f"{URL}/search", params={"q": q["query"], "mode": mode})
-            wall_latencies.append((time.perf_counter() - t0) * 1000)
-            server_latencies.append(r.json()["latency_ms"])
+    # Reuse one connection. Calling the top-level ``httpx.get`` helper creates
+    # and tears down a Client for every request; on Windows that connection
+    # setup can dominate wall time and make this 300-request cell hit its
+    # timeout even though the server-side search is comfortably below 50 ms.
+    with httpx.Client(timeout=30.0) as http:
+        # Warm the model/index before measuring tail latency, as required by
+        # the rubric and described in README troubleshooting.
+        for q in golden[:10]:
+            warm = http.get(f"{URL}/search", params={"q": q["query"], "mode": mode})
+            warm.raise_for_status()
+
+        for _ in range(reps):
+            for q in golden:
+                t0 = time.perf_counter()
+                r = http.get(f"{URL}/search", params={"q": q["query"], "mode": mode})
+                wall_latencies.append((time.perf_counter() - t0) * 1000)
+                r.raise_for_status()
+                server_latencies.append(r.json()["latency_ms"])
     return {
         "p50_server": percentile(server_latencies, 0.50),
         "p95_server": percentile(server_latencies, 0.95),

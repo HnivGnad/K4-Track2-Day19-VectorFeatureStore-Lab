@@ -185,7 +185,10 @@ else:
 import pandas as pd
 entity_df = pd.DataFrame({
     "user_id": ["u_001", "u_002", "u_003"],
-    "event_timestamp": [NOW - timedelta(hours=2), NOW - timedelta(hours=1), NOW],
+    # Every lookup timestamp is after that user's generated profile event, so
+    # the evidence table contains all three requested rows. Feast still picks
+    # the latest value at or before NOW (never a future value).
+    "event_timestamp": [NOW, NOW, NOW],
 })
 
 historical = fs.get_historical_features(
